@@ -46,6 +46,7 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.7.0",
     "pre-commit>=3.6.0",
+    "debugpy>=1.8.20",
 ]
 
 [project.scripts]
