@@ -18,7 +18,8 @@ COPY src/ ./src/
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir '.[dev]'
     
 # Runtime stage
 FROM python:3.12-slim
@@ -42,5 +43,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')" || exit 1
 
 # Run the server
-CMD ["python", "-m", "nolongerevil.main"]
+CMD ["python", "-Xfrozen_modules=off", "-m", "debugpy", "--listen", "0.0.0.0:5678", "-m", "nolongerevil.main"]
+
 
