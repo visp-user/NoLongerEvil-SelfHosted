@@ -842,7 +842,6 @@ class SQLModelService(AbstractDeviceStateManager):
                 return
 
             postal_code = None
-            country = "US"
 
             for serial in devices:
                 device_obj = await self.get_object(serial, f"device.{serial}")
@@ -850,7 +849,10 @@ class SQLModelService(AbstractDeviceStateManager):
                     pc = device_obj.value.get("postal_code")
                     if pc:
                         postal_code = pc
-                        country = device_obj.value.get("country", "US")
+                        # XX aways 'country_code' here?
+                        country = device_obj.value.get("country") or device_obj.value.get(
+                            "country_code"
+                        )
                         break
 
             if not postal_code:
@@ -861,9 +863,13 @@ class SQLModelService(AbstractDeviceStateManager):
                 return
 
             now = now_ms()
+
+            entry_key = f"{postal_code},{country}"
+            entry = weather.data.get(entry_key, {})
+            logger.info(f"weather for '{postal_code},{country}': '{entry}'")
             weather_data = {
-                "current": weather.data.get("current"),
-                "location": weather.data.get("location"),
+                "current": entry.get("current"),
+                "location": entry.get("location"),
                 "updatedAt": now,
             }
 

@@ -4,6 +4,7 @@ from aiohttp import web
 
 from nolongerevil.lib.logger import get_logger
 from nolongerevil.services.weather_service import WeatherService
+from nolongerevil.utils.weather_query import parse_query
 
 logger = get_logger(__name__)
 
@@ -23,9 +24,16 @@ async def handle_weather(request: web.Request) -> web.Response:
     """
     weather_service: WeatherService = request.app["weather_service"]
 
+    logger.info(f"query: '{request.query}'/'{request.query_string}'")
+
     # Extract query parameters
-    postal_code = request.query.get("postal_code")
-    country = request.query.get("country")
+    parsed_query = parse_query(request.query)
+
+    if parsed_query and not parsed_query.query_is_ip:
+        postal_code, country = parsed_query.postal_code, parsed_query.country
+    else:
+        postal_code, country = None, None
+
     query_string = request.query_string
 
     # Get weather data (cached or fresh)

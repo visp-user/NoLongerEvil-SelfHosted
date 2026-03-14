@@ -594,12 +594,32 @@ class MqttIntegration(BaseIntegration):
             or shared_values.get("outside_temperature")
             or device_values.get("outside_temperature")
         )
-        if outdoor_temp is not None:
+        if outdoor_temp is None:
+            postal_code, country = (
+                device_values.get("postal_code"),
+                device_values.get("country") or device_values.get("country_code"),
+            )
+            device_weather = await self._state_service.storage.get_cached_weather(
+                postal_code=postal_code, country=country
+            )
+
+            entry_key = f"{postal_code},{country}"
+            if device_weather and (entry := device_weather.data.get(entry_key)):
+                outdoor_temp = entry.get("current", {}).get("temp_c")
+                location = entry.get("location")
+
+                logger.info(f"it is {outdoor_temp} at {location}")
+
+        if outdoor_temp:
             await client.publish(
                 f"{prefix}/{serial}/ha/outdoor_temperature",
                 str(outdoor_temp),
                 retain=True,
             )
+        else:
+            logger.warning(f"outdoor temperature is not available for {serial}")
+        #     topic = build_availability_topic(self._topic_prefix, serial)
+        #     await self._active_client.publish(topic, "offline", retain=True)
 
         # Occupancy
         is_away = is_device_away(device_values)
