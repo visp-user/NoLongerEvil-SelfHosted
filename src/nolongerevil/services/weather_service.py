@@ -118,7 +118,7 @@ class WeatherService:
                 # ip/postal_code,
                 data[f"{postal_code},{country}"] = data.pop(first_item[0])
 
-                logger.info(f"weather data for '{postal_code},{country}' '{data}'")
+                logger.debug(f"weather data for '{postal_code},{country}' '{data}'")
 
                 weather = WeatherData(
                     postal_code=postal_code,

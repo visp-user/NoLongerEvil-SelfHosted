@@ -866,12 +866,14 @@ class SQLModelService(AbstractDeviceStateManager):
 
             entry_key = f"{postal_code},{country}"
             entry = weather.data.get(entry_key, {})
-            logger.info(f"weather for '{postal_code},{country}': '{entry}'")
             weather_data = {
                 "current": entry.get("current"),
                 "location": entry.get("location"),
                 "updatedAt": now,
             }
+            logger.info(
+                f"it is {weather_data.get('current').get('temp_c')} at {weather_data.get('location')}"
+            ) 
 
             for serial in devices:
                 user_key = f"user.{user_id}"
