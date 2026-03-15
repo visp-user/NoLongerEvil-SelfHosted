@@ -9,6 +9,7 @@ from nolongerevil.config import settings
 from nolongerevil.lib.logger import get_logger
 from nolongerevil.lib.types import WeatherData
 from nolongerevil.services.abstract_device_state_manager import AbstractDeviceStateManager
+from nolongerevil.utils.weather_query import parse_query
 
 logger = get_logger(__name__)
 
@@ -82,37 +83,54 @@ class WeatherService:
             Weather data dictionary or None on error
         """
         # Determine cache key
-        cache_postal = postal_code or "ip"
-        cache_country = country or "auto"
+        parsed_query = parse_query(query_string)        
+        querried_by_ip = (
+            parsed_query.query_is_ip
+            if parsed_query
+            else False or (postal_code == None and country == None)
+        )
 
-        # Check cache
-        cached = await self._storage.get_cached_weather(cache_postal, cache_country)
-        if cached and self._is_cache_valid(cached):
-            logger.debug(f"Weather cache hit for {cache_postal}/{cache_country}")
-            return cached.data
-
-        # Fetch from Nest weather API
-        logger.debug(f"Weather cache miss for {cache_postal}/{cache_country}, fetching...")
+        if not querried_by_ip:
+            # Check cache
+            cached = await self._storage.get_cached_weather(postal_code, country)
+            if cached and self._is_cache_valid(cached):
+                logger.debug(f"Weather cache hit for {postal_code}/{country}")
+                return cached.data
+        else:
+            # Fetch from Nest weather API
+            # TODO fixme
+            logger.debug(f"Weather cache miss for {postal_code}/{country}, fetching...")
 
         try:
             data = await self._fetch_weather(query_string)
             if data:
-                # Cache the result
+                first_item = next(iter(data.items()))
+
+                if location := first_item[1].get("location"):
+                    if "invalid" in location:
+                        logger.warning(f"'{postal_code},{country}' is an {location} location")
+                        return None
+                # XX always get country and zip here?
+                country = location.get("country") or location.get("country_code")
+                postal_code = location.get("zip") or location.get("postal_code")
+
+                # XX
+                # ip/postal_code,
+                data[f"{postal_code},{country}"] = data.pop(first_item[0])
+
+                logger.debug(f"weather data for '{postal_code},{country}' '{data}'")
+
                 weather = WeatherData(
-                    postal_code=cache_postal,
-                    country=cache_country,
+                    postal_code=postal_code,
+                    country=country,
                     fetched_at=datetime.now(),
                     data=data,
                 )
+                # Cache the result
                 await self._storage.cache_weather(weather)
                 return data
         except Exception as e:
             logger.error(f"Failed to fetch weather: {e}")
-
-        # Return stale cache if available
-        if cached:
-            logger.warning(f"Returning stale weather cache for {cache_postal}/{cache_country}")
-            return cached.data
 
         return None
 

@@ -168,3 +168,27 @@ class TemperatureSafetyBounds:
     # Generic min/max used by temperature_safety module
     min_celsius: float = 7.222  # 45F default
     max_celsius: float = 35.0  # 95F default
+
+
+@dataclass
+class WeatherQuery:
+    """
+    Represents a structured weather lookup request.
+
+    Attributes:
+        postal_code (str | None): The postal or zip code for the location lookup.
+        country (str | None): The ISO country code (e.g., 'US', 'GB').
+        query_is_ip (bool): If True, indicates the search should be performed
+            using the client's IP address instead of geographic codes.
+    """
+
+    postal_code: str | None = None
+    country: str | None = None
+    query_is_ip: bool = False
+
+    def __post_init__(self):
+        """Automatically called after __init__"""
+        if self.postal_code:
+            self.postal_code = self.postal_code.strip()
+        if self.country:
+            self.country = self.country.strip()
